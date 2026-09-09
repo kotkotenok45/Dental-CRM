@@ -3,23 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dental CRM - Модуль пациентов и финансов</title>
+  <title>Dental CRM</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Google GIS SDK -->
-  <script src="https://accounts.google.com/gsi/client" async defer onload="initGoogleClient()"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
 
   <!-- Header -->
-  <header class="bg-indigo-600 text-white p-4 shadow-md flex flex-col md:flex-row justify-between items-center gap-4">
+  <header class="bg-indigo-600 text-white p-4 shadow-md flex justify-between items-center relative z-10">
     <h1 class="text-xl font-bold">🦷 Dental App</h1>
     
     <div class="flex items-center space-x-3">
-      <button id="googleAuthBtn" type="button" onclick="handleGoogleSignIn()" class="bg-indigo-700 hover:bg-indigo-800 px-3 py-1.5 rounded-lg text-sm font-medium transition shadow-sm border border-indigo-500/30">
+      <button id="googleAuthBtn" type="button" class="bg-indigo-700 hover:bg-indigo-800 px-3 py-1.5 rounded-lg text-sm font-medium transition shadow-sm border border-indigo-500/30">
         <span id="googleBtnText">📅 Подключить Google</span>
       </button>
 
-      <button type="button" onclick="openSettingsModal()" class="bg-indigo-800 hover:bg-indigo-900 px-3 py-1.5 rounded-lg text-sm font-medium transition">
+      <button id="openSettingsBtn" type="button" class="bg-indigo-800 hover:bg-indigo-900 px-3 py-1.5 rounded-lg text-sm font-medium transition">
         ⚙️ Настройки API
       </button>
     </div>
@@ -32,7 +32,7 @@
     <section class="lg:col-span-1 space-y-6">
       <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
         <h2 class="text-lg font-semibold mb-4 text-slate-700">Запись / Новый пациент</h2>
-        <form id="appointmentForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+        <form id="appointmentForm" class="space-y-4">
           
           <div>
             <label class="block text-xs font-medium text-slate-500 uppercase mb-1">ФИО Пациента *</label>
@@ -64,17 +64,15 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 gap-2">
-            <div>
-              <label class="block text-xs font-medium text-slate-500 uppercase mb-1">Дата и время приёма *</label>
-              <input type="datetime-local" id="appDateTime" required class="w-full border rounded px-3 py-2 text-sm focus:outline-indigo-500">
-            </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 uppercase mb-1">Дата и время приёма *</label>
+            <input type="datetime-local" id="appDateTime" required class="w-full border rounded px-3 py-2 text-sm focus:outline-indigo-500">
           </div>
 
           <!-- Doctor Note Block -->
           <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
             <span class="text-xs font-bold text-amber-800 uppercase block">📌 Заметка к приёму</span>
-            <input type="text" id="doctorNoteText" placeholder="Обрезать каппы, слепки..." class="w-full border rounded px-2 py-1 text-sm bg-white">
+            <input type="text" id="doctorNoteText" placeholder="Ообрезать каппы, слепки..." class="w-full border rounded px-2 py-1 text-sm bg-white">
             <div class="flex items-center space-x-2 text-xs text-amber-900">
               <span>Напомнить за</span>
               <input type="number" id="remindDaysBefore" value="3" min="1" class="w-12 border rounded px-1 py-0.5 text-center bg-white">
@@ -96,7 +94,7 @@
       <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-lg font-semibold text-slate-700">База пациентов</h2>
-          <button type="button" onclick="loadDataFromJSONbin()" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+          <button type="button" id="refreshBtn" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
             🔄 Обновить
           </button>
         </div>
@@ -120,21 +118,18 @@
   <!-- Patient Card Modal -->
   <div id="patientModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 z-40 overflow-y-auto">
     <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto">
-      
-      <!-- Modal Header -->
       <div class="flex justify-between items-start border-b pb-3">
         <div>
           <h3 id="mPatientName" class="text-xl font-bold text-slate-800">Имя Пациента</h3>
           <p id="mPatientPhone" class="text-xs text-slate-500">Телефон</p>
         </div>
-        <button type="button" onclick="closePatientModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+        <button type="button" id="closePatientModalBtn" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
       </div>
 
-      <!-- Financial Status Summary -->
       <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
         <div class="flex justify-between items-center">
           <h4 class="font-bold text-slate-700 text-sm uppercase">💰 Финансовый баланс</h4>
-          <button type="button" onclick="addPaymentPrompt()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-2.5 py-1 rounded font-medium transition">
+          <button type="button" id="addPaymentBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-2.5 py-1 rounded font-medium transition">
             + Внести платёж
           </button>
         </div>
@@ -154,42 +149,31 @@
           </div>
         </div>
 
-        <!-- Progress bar -->
         <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
           <div id="mProgressBar" class="bg-emerald-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
         </div>
       </div>
 
-      <!-- Anamnesis -->
       <div>
         <h4 class="text-xs font-bold text-slate-500 uppercase mb-1">Анамнез / Особенности</h4>
         <p id="mAnamnesis" class="text-sm bg-slate-50 p-3 rounded border text-slate-700">Нет данных</p>
       </div>
 
-      <!-- Timeline Notes Section -->
       <div class="space-y-3">
         <h4 class="text-xs font-bold text-slate-500 uppercase">Заметки с датами</h4>
-        
         <div class="flex gap-2">
           <input type="text" id="newNoteText" placeholder="Новая заметка..." class="flex-1 border rounded px-3 py-1.5 text-sm">
-          <button type="button" onclick="addNoteToPatient()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-sm font-medium">
+          <button type="button" id="addNoteBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-sm font-medium">
             Добавить
           </button>
         </div>
-
-        <div id="mNotesList" class="space-y-2 max-h-40 overflow-y-auto pr-1">
-          <!-- Notes rendered dynamically -->
-        </div>
+        <div id="mNotesList" class="space-y-2 max-h-40 overflow-y-auto pr-1"></div>
       </div>
 
-      <!-- Payments History -->
       <div class="space-y-2">
         <h4 class="text-xs font-bold text-slate-500 uppercase">История платежей</h4>
-        <div id="mPaymentsList" class="space-y-1 text-xs text-slate-600">
-          <!-- Payments rendered dynamically -->
-        </div>
+        <div id="mPaymentsList" class="space-y-1 text-xs text-slate-600"></div>
       </div>
-
     </div>
   </div>
 
@@ -214,15 +198,13 @@
       </div>
 
       <div class="flex justify-end space-x-2 pt-2">
-        <button type="button" onclick="closeSettingsModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded">Отмена</button>
-        <button type="button" onclick="saveSettings()" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">Сохранить</button>
+        <button type="button" id="closeSettingsBtn" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded">Отмена</button>
+        <button type="button" id="saveSettingsBtn" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">Сохранить</button>
       </div>
     </div>
   </div>
 
   <script>
-    const DEFAULT_GOOGLE_CLIENT_ID = ""; 
-
     let dbData = { patients: [], appointments: [] };
     let activePatientId = null;
     let googleAccessToken = null;
@@ -232,12 +214,36 @@
       return {
         masterKey: localStorage.getItem('jsonbin_master_key') || '',
         binId: localStorage.getItem('jsonbin_bin_id') || '',
-        googleClientId: localStorage.getItem('google_client_id') || DEFAULT_GOOGLE_CLIENT_ID
+        googleClientId: localStorage.getItem('google_client_id') || ''
       };
     }
 
-    // Инициализация при загрузке
     window.addEventListener('DOMContentLoaded', () => {
+      // Принудительно скрываем оверлеи при старте
+      closeSettingsModal();
+      closePatientModal();
+
+      // Навешивание событий на кнопки верхнего меню
+      document.getElementById('googleAuthBtn').addEventListener('click', handleGoogleSignIn);
+      document.getElementById('openSettingsBtn').addEventListener('click', openSettingsModal);
+      document.getElementById('refreshBtn').addEventListener('click', loadDataFromJSONbin);
+      document.getElementById('appointmentForm').addEventListener('submit', handleFormSubmit);
+
+      document.getElementById('closeSettingsBtn').addEventListener('click', closeSettingsModal);
+      document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+      
+      document.getElementById('closePatientModalBtn').addEventListener('click', closePatientModal);
+      document.getElementById('addNoteBtn').addEventListener('click', addNoteToPatient);
+      document.getElementById('addPaymentBtn').addEventListener('click', addPaymentPrompt);
+
+      // Закрытие по клавише Escape
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeSettingsModal();
+          closePatientModal();
+        }
+      });
+
       const { masterKey, binId } = getCredentials();
       if (!masterKey || !binId) {
         openSettingsModal();
@@ -246,27 +252,29 @@
       }
     });
 
-    // Инициализация Google SDK по вызову onload
     function initGoogleClient() {
       const { googleClientId } = getCredentials();
       if (googleClientId && window.google && window.google.accounts) {
-        tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: googleClientId,
-          scope: 'https://www.googleapis.com/auth/calendar.events',
-          callback: (response) => {
-            if (response.error) {
-              alert('Ошибка авторизации Google: ' + response.error);
-              return;
-            }
-            googleAccessToken = response.access_token;
-            document.getElementById('googleBtnText').innerText = '✅ Google Подключен';
-            alert('Google Календарь подключен!');
-          },
-        });
+        try {
+          tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: googleClientId,
+            scope: 'https://www.googleapis.com/auth/calendar.events',
+            callback: (response) => {
+              if (response.error) {
+                alert('Ошибка авторизации Google: ' + response.error);
+                return;
+              }
+              googleAccessToken = response.access_token;
+              document.getElementById('googleBtnText').innerText = '✅ Google Подключен';
+              alert('Google Календарь успешно подключен!');
+            },
+          });
+        } catch(e) {
+          console.warn('Ошибка инициализации Google Client:', e);
+        }
       }
     }
 
-    // ===== JSONBIN SERVICE =====
     async function loadDataFromJSONbin() {
       const { masterKey, binId } = getCredentials();
       if (!masterKey || !binId) {
@@ -279,42 +287,27 @@
           headers: { 'X-Master-Key': masterKey }
         });
         
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP status ${response.status}`);
         
         const result = await response.json();
         let record = result.record;
 
-        let structChanged = false;
-        if (typeof record !== 'object' || record === null) {
-          record = { patients: [], appointments: [] };
-          structChanged = true;
-        }
-        if (!Array.isArray(record.patients)) {
-          record.patients = [];
-          structChanged = true;
-        }
-        if (!Array.isArray(record.appointments)) {
-          record.appointments = [];
-          structChanged = true;
-        }
+        if (typeof record !== 'object' || record === null) record = { patients: [], appointments: [] };
+        if (!Array.isArray(record.patients)) record.patients = [];
+        if (!Array.isArray(record.appointments)) record.appointments = [];
 
         dbData = record;
-
-        if (structChanged) {
-          await saveDataToJSONbin();
-        }
-
         renderPatients();
         renderRecords();
       } catch (err) {
         console.error(err);
-        alert('Ошибка загрузки JSONbin: ' + err.message + '\nПроверьте ключи в настройках.');
+        alert('Ошибка JSONbin: ' + err.message + '\nПроверьте ключи в настройках.');
       }
     }
 
     async function saveDataToJSONbin() {
       const { masterKey, binId } = getCredentials();
-      if (!masterKey || !binId) throw new Error('Не настроены ключи');
+      if (!masterKey || !binId) throw new Error('Не настроены ключи JSONbin');
 
       const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
         method: 'PUT',
@@ -325,10 +318,9 @@
         body: JSON.stringify(dbData)
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error(`HTTP status ${res.status}`);
     }
 
-    // ===== GOOGLE CALENDAR OAUTH =====
     function handleGoogleSignIn() {
       if (googleAccessToken) return;
 
@@ -340,7 +332,7 @@
       }
 
       if (!window.google || !window.google.accounts) {
-        alert('Библиотека Google API ещё не загрузилась или заблокирована браузером.');
+        alert('Google API не загружен или заблокирован расширением (AdBlock/Brave).');
         return;
       }
 
@@ -359,13 +351,6 @@
       const startDate = new Date(startIso);
       const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
 
-      const event = {
-        summary: title,
-        description: description,
-        start: { dateTime: startDate.toISOString() },
-        end: { dateTime: endDate.toISOString() }
-      };
-
       try {
         const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
           method: 'POST',
@@ -373,18 +358,21 @@
             'Authorization': `Bearer ${googleAccessToken}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(event)
+          body: JSON.stringify({
+            summary: title,
+            description: description,
+            start: { dateTime: startDate.toISOString() },
+            end: { dateTime: endDate.toISOString() }
+          })
         });
         if (!res.ok) return null;
         const data = await res.json();
         return data.id;
       } catch (e) {
-        console.warn('Google Calendar Error:', e);
         return null;
       }
     }
 
-    // ===== FORM SUBMIT =====
     async function handleFormSubmit(e) {
       e.preventDefault();
       const submitBtn = document.getElementById('submitBtn');
@@ -398,7 +386,6 @@
         const appDateTime = document.getElementById('appDateTime').value;
         const totalCostInput = Number(document.getElementById('totalCost').value) || 0;
         const paymentInput = Number(document.getElementById('paymentAmount').value) || 0;
-        
         const noteText = document.getElementById('doctorNoteText').value.trim();
         const daysBefore = parseInt(document.getElementById('remindDaysBefore').value) || 3;
 
@@ -408,7 +395,6 @@
 
         if (!dbData.patients) dbData.patients = [];
         let patient = dbData.patients.find(p => p.phone === phone);
-
         const nowIso = new Date().toISOString();
 
         if (!patient) {
@@ -462,9 +448,8 @@
         renderPatients();
         renderRecords();
         document.getElementById('appointmentForm').reset();
-        alert('Запись и данные пациента сохранены!');
+        alert('Запись и данные сохранены!');
       } catch (err) {
-        console.error(err);
         alert('Ошибка сохранения: ' + err.message);
       } finally {
         submitBtn.disabled = false;
@@ -472,7 +457,6 @@
       }
     }
 
-    // ===== RENDER PATIENTS BASE =====
     function renderPatients() {
       const container = document.getElementById('patientsList');
       if (!dbData.patients || dbData.patients.length === 0) {
@@ -486,7 +470,4 @@
         const debt = Math.max(0, totalCost - totalPaid);
 
         return `
-          <div onclick="openPatientModal('${p.id}')" class="bg-slate-50 border rounded-lg p-3 hover:border-indigo-300 cursor-pointer transition flex justify-between items-center">
-            <div>
-              <h3 class="font-bold text-slate-800 text-sm">${p.name}</h3>
-     
+          <div onclick="openPatientModal('${p.id}')" class="bg-slate-50 border rounded-lg p-3 hover:border-indigo-300 cursor-pointer transition flex justify-between items-cente
