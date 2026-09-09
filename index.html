@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dental CRM - Модуль пациентов и финансов</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <!-- Google GIS SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer onload="initGoogleClient()"></script>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
 
@@ -14,11 +15,11 @@
     <h1 class="text-xl font-bold">🦷 Dental App</h1>
     
     <div class="flex items-center space-x-3">
-      <button id="googleAuthBtn" onclick="handleGoogleSignIn()" class="bg-indigo-700 hover:bg-indigo-800 px-3 py-1.5 rounded-lg text-sm font-medium transition shadow-sm border border-indigo-500/30">
+      <button id="googleAuthBtn" type="button" onclick="handleGoogleSignIn()" class="bg-indigo-700 hover:bg-indigo-800 px-3 py-1.5 rounded-lg text-sm font-medium transition shadow-sm border border-indigo-500/30">
         <span id="googleBtnText">📅 Подключить Google</span>
       </button>
 
-      <button onclick="openSettingsModal()" class="bg-indigo-800 hover:bg-indigo-900 px-3 py-1.5 rounded-lg text-sm font-medium transition">
+      <button type="button" onclick="openSettingsModal()" class="bg-indigo-800 hover:bg-indigo-900 px-3 py-1.5 rounded-lg text-sm font-medium transition">
         ⚙️ Настройки API
       </button>
     </div>
@@ -95,7 +96,7 @@
       <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-lg font-semibold text-slate-700">База пациентов</h2>
-          <button onclick="loadDataFromJSONbin()" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+          <button type="button" onclick="loadDataFromJSONbin()" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
             🔄 Обновить
           </button>
         </div>
@@ -126,14 +127,14 @@
           <h3 id="mPatientName" class="text-xl font-bold text-slate-800">Имя Пациента</h3>
           <p id="mPatientPhone" class="text-xs text-slate-500">Телефон</p>
         </div>
-        <button onclick="closePatientModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+        <button type="button" onclick="closePatientModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
       </div>
 
       <!-- Financial Status Summary -->
       <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
         <div class="flex justify-between items-center">
           <h4 class="font-bold text-slate-700 text-sm uppercase">💰 Финансовый баланс</h4>
-          <button onclick="addPaymentPrompt()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-2.5 py-1 rounded font-medium transition">
+          <button type="button" onclick="addPaymentPrompt()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-2.5 py-1 rounded font-medium transition">
             + Внести платёж
           </button>
         </div>
@@ -170,8 +171,8 @@
         <h4 class="text-xs font-bold text-slate-500 uppercase">Заметки с датами</h4>
         
         <div class="flex gap-2">
-          <input type="text" id="newNoteText" placeholder="Новая заметка (например: установили брекеты на ВЧ)..." class="flex-1 border rounded px-3 py-1.5 text-sm">
-          <button onclick="addNoteToPatient()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-sm font-medium">
+          <input type="text" id="newNoteText" placeholder="Новая заметка..." class="flex-1 border rounded px-3 py-1.5 text-sm">
+          <button type="button" onclick="addNoteToPatient()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-sm font-medium">
             Добавить
           </button>
         </div>
@@ -213,8 +214,8 @@
       </div>
 
       <div class="flex justify-end space-x-2 pt-2">
-        <button onclick="closeSettingsModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded">Отмена</button>
-        <button onclick="saveSettings()" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">Сохранить</button>
+        <button type="button" onclick="closeSettingsModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded">Отмена</button>
+        <button type="button" onclick="saveSettings()" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">Сохранить</button>
       </div>
     </div>
   </div>
@@ -233,6 +234,36 @@
         binId: localStorage.getItem('jsonbin_bin_id') || '',
         googleClientId: localStorage.getItem('google_client_id') || DEFAULT_GOOGLE_CLIENT_ID
       };
+    }
+
+    // Инициализация при загрузке
+    window.addEventListener('DOMContentLoaded', () => {
+      const { masterKey, binId } = getCredentials();
+      if (!masterKey || !binId) {
+        openSettingsModal();
+      } else {
+        loadDataFromJSONbin();
+      }
+    });
+
+    // Инициализация Google SDK по вызову onload
+    function initGoogleClient() {
+      const { googleClientId } = getCredentials();
+      if (googleClientId && window.google && window.google.accounts) {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: googleClientId,
+          scope: 'https://www.googleapis.com/auth/calendar.events',
+          callback: (response) => {
+            if (response.error) {
+              alert('Ошибка авторизации Google: ' + response.error);
+              return;
+            }
+            googleAccessToken = response.access_token;
+            document.getElementById('googleBtnText').innerText = '✅ Google Подключен';
+            alert('Google Календарь подключен!');
+          },
+        });
+      }
     }
 
     // ===== JSONBIN SERVICE =====
@@ -277,7 +308,7 @@
         renderRecords();
       } catch (err) {
         console.error(err);
-        alert('Ошибка загрузки JSONbin: ' + err.message);
+        alert('Ошибка загрузки JSONbin: ' + err.message + '\nПроверьте ключи в настройках.');
       }
     }
 
@@ -308,23 +339,18 @@
         return;
       }
 
-      if (!tokenClient) {
-        tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: googleClientId,
-          scope: 'https://www.googleapis.com/auth/calendar.events',
-          callback: (response) => {
-            if (response.error) {
-              alert('Ошибка авторизации Google');
-              return;
-            }
-            googleAccessToken = response.access_token;
-            document.getElementById('googleBtnText').innerText = '✅ Google Подключен';
-            alert('Google Календарь подключен!');
-          },
-        });
+      if (!window.google || !window.google.accounts) {
+        alert('Библиотека Google API ещё не загрузилась или заблокирована браузером.');
+        return;
       }
 
-      tokenClient.requestAccessToken();
+      if (!tokenClient) {
+        initGoogleClient();
+      }
+
+      if (tokenClient) {
+        tokenClient.requestAccessToken();
+      }
     }
 
     async function createGoogleCalendarEvent(title, description, startIso) {
@@ -380,7 +406,6 @@
         const remindDate = new Date(appDate);
         remindDate.setDate(remindDate.getDate() - daysBefore);
 
-        // Поиск или создание пациента
         if (!dbData.patients) dbData.patients = [];
         let patient = dbData.patients.find(p => p.phone === phone);
 
@@ -407,7 +432,6 @@
           }
         }
 
-        // Google Calendar Event
         let googleEventId = null;
         if (googleAccessToken) {
           googleEventId = await createGoogleCalendarEvent(
@@ -417,7 +441,6 @@
           );
         }
 
-        // Новая запись на приём
         const newAppointment = {
           id: 'app_' + Date.now(),
           patient_id: patient.id,
@@ -466,25 +489,4 @@
           <div onclick="openPatientModal('${p.id}')" class="bg-slate-50 border rounded-lg p-3 hover:border-indigo-300 cursor-pointer transition flex justify-between items-center">
             <div>
               <h3 class="font-bold text-slate-800 text-sm">${p.name}</h3>
-              <p class="text-xs text-slate-500">📞 ${p.phone}</p>
-            </div>
-            <div class="text-right">
-              <span class="text-xs font-semibold ${debt > 0 ? 'text-rose-600' : 'text-emerald-600'} block">
-                ${debt > 0 ? `Долг: ${debt} ₽` : 'Оплачено'}
-              </span>
-              <span class="text-[10px] text-slate-400">Всего: ${totalCost} ₽</span>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    // ===== RENDER APPOINTMENTS =====
-    function renderRecords() {
-      const list = document.getElementById('recordsList');
-      if (!dbData.appointments || dbData.appointments.length === 0) {
-        list.innerHTML = `<p class="text-slate-400 text-sm text-center py-4">Приёмов нет.</p>`;
-        return;
-      }
-
-      const so
+     
