@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dental CRM - JSONbin & Google Calendar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-indigo-600 text-white p-4 shadow-md flex justify-between items-center">
+    <h1 class="text-xl font-bold">🦷 Dental App</h1>
+    <div class="space-x-2">
+      <button onclick="initGapiAuth()" class="bg-emerald-500 hover:bg-emerald-600 px-3 py-1.5 rounded text-sm font-medium transition">
+        📅 Подключить Google
+      </button>
+      <button onclick="openSettingsModal()" class="bg-indigo-700 hover:bg-indigo-800 px-3 py-1.5 rounded text-sm font-medium transition">
+        ⚙️ Настройки API
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Left Column: Patient & Appointment Forms -->
+    <section class="lg:col-span-1 space-y-6">
+      
+      <!-- New Appointment & Patient Card -->
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-semibold mb-4 text-slate-700">Запись пациента</h2>
+        <form id="appointmentForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+          
+          <div>
+            <label class="block text-xs font-medium text-slate-500 uppercase mb-1">ФИО Пациента</label>
+            <input type="text" id="patientName" required class="w-full border rounded px-3 py-2 text-sm focus:outline-indigo-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-500 uppercase mb-1">Телефон (для WhatsApp)</label>
+            <input type="tel" id="patientPhone" placeholder="79991112233" required class="w-full border rounded px-3 py-2 text-sm focus:outline-indigo-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-500 uppercase mb-1">Анамнез / Описание</label>
+            <textarea id="anamnesis" rows="2" class="w-full border rounded px-3 py-2 text-sm focus:outline-indigo-500" placeholder="Аллергии, прикус, особенности..."></textarea>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-medium text-slate-500 uppercase mb-1">Дата и время</label>
+              <input type="datetime-local" id="appDateTime" required class="w-full border rounded px-3 py-2 text-sm focus:outline-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-500 uppercase mb-1">Оплата (руб)</label>
+              <input type="number" id="paymentAmount" value="0" class="w-full border rounded px-3 py-2 text-sm focus:outline-indigo-500">
+            </div>
+          </div>
+
+          <!-- Doctor Note Block -->
+          <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+            <span class="text-xs font-bold text-amber-800 uppercase block">📌 Напоминалка для себя</span>
+            <input type="text" id="doctorNoteText" placeholder="Например: Обрезать каппы, залить понтик" class="w-full border rounded px-2 py-1 text-sm bg-white">
+            <div class="flex items-center space-x-2 text-xs text-amber-900">
+              <span>Напомнить за</span>
+              <input type="number" id="remindDaysBefore" value="3" class="w-12 border rounded px-1 py-0.5 text-center bg-white">
+              <span>дн. до приема</span>
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg transition shadow-sm">
+            Сохранить и записать
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Right Column: Database Records -->
+    <section class="lg:col-span-2 space-y-6">
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-semibold text-slate-700">Список приёмов и заметок</h2>
+          <button onclick="loadDataFromJSONbin()" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+            🔄 Обновить данные
+          </button>
+        </div>
+
+        <div id="recordsList" class="space-y-4">
+          <p class="text-slate-400 text-sm text-center py-8">Загрузка данных...</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+      <h3 class="text-lg font-bold text-slate-800">Настройки доступа JSONbin</h3>
+      
+      <div>
+        <label class="block text-xs font-medium text-slate-500 uppercase mb-1">X-Master-Key</label>
+        <input type="password" id="cfgMasterKey" class="w-full border rounded px-3 py-2 text-sm">
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-500 uppercase mb-1">BIN ID</label>
+        <input type="text" id="cfgBinId" class="w-full border rounded px-3 py-2 text-sm">
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-500 uppercase mb-1">Google OAuth Client ID (опционально)</label>
+        <input type="text" id="cfgGoogleClientId" placeholder="apps.googleusercontent.com" class="w-full border rounded px-3 py-2 text-sm">
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2">
+        <button onclick="closeSettingsModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded">Отмена</button>
+        <button onclick="saveSettings()" class="px-4 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== STATE & CONFIG =====
+    let dbData = { patients: [], appointments: [] };
+    let googleAccessToken = null;
+
+    function getCredentials() {
+      return {
+        masterKey: localStorage.getItem('jsonbin_master_key') || '',
+        binId: localStorage.getItem('jsonbin_bin_id') || '',
+        googleClientId: localStorage.getItem('google_client_id') || ''
+      };
+    }
+
+    // ===== JSONBIN API SERVICE =====
+    async function loadDataFromJSONbin() {
+      const { masterKey, binId } = getCredentials();
+      if (!masterKey || !binId) {
+        openSettingsModal();
+        return;
+      }
+
+      try {
+        const response = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+          headers: { 'X-Master-Key': masterKey }
+        });
+        if (!response.ok) throw new Error('Ошибка загрузки JSONbin');
+        const result = await response.json();
+        dbData = result.record || { patients: [], appointments: [] };
+        renderRecords();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    async function saveDataToJSONbin() {
+      const { masterKey, binId } = getCredentials();
+      if (!masterKey || !binId) return;
+
+      try {
+        await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Master-Key': masterKey
+          },
+          body: JSON.stringify(dbData)
+        });
+      } catch (err) {
+        console.error('Ошибка сохранения:', err);
+      }
+    }
+
+    // ===== GOOGLE CALENDAR INTEGRATION =====
+    function initGapiAuth() {
+      const { googleClientId } = getCredentials();
+      if (!googleClientId) {
+        alert('Сначала укажите Google Client ID в настройках!');
+        openSettingsModal();
+        return;
+      }
+
+      const client = google.accounts.oauth2.initTokenClient({
+        client_id: googleClientId,
+        scope: 'https://www.googleapis.com/auth/calendar.events',
+        callback: (response) => {
+          if (response.access_token) {
+            googleAccessToken = response.access_token;
+            alert('Google Календарь успешно подключен!');
+          }
+        },
+      });
+      client.requestAccessToken();
+    }
+
+    async function createGoogleCalendarEvent(title, description, startIso) {
+      if (!googleAccessToken) return null;
+
+      const startDate = new Date(startIso);
+      const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // +1 час
+
+      const event = {
+        summary: title,
+        description: description,
+        start: { dateTime: startDate.toISOString() },
+        end: { dateTime: endDate.toISOString() }
+      };
+
+      try {
+        const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${googleAccessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(event)
+        });
+        const data = await res.json();
+        return data.id;
+      } catch (e) {
+        console.error('Google Calendar error:', e);
+        return null;
+      }
+    }
+
+    // ===== FORM HANDLER =====
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      
+      const name = document.getElementById('patientName').value;
+      const phone = document.getElementById('patientPhone').value;
+      const anamnesis = document.getElementById('anamnesis').value;
+      const appDateTime = document.getElementById('appDateTime').value;
+      const payment = document.getElementById('paymentAmount').value;
+      
+      const noteText = document.getElementById('doctorNoteText').value;
+      const daysBefore = parseInt(document.getElementById('remindDaysBefore').value) || 3;
+
+      // Calculate reminder date
+      const appDate = new Date(appDateTime);
+      const remindDate = new Date(appDate);
+      remindDate.setDate(remindDate.getDate() - daysBefore);
+
+      // 1. Save or update Patient
+      let patient = dbData.patients.find(p => p.phone === phone);
+      if (!patient) {
+        patient = { id: 'pat_' + Date.now(), name, phone, anamnesis };
+        dbData.patients.push(patient);
+      }
+
+      // 2. Add Event to Google Calendar (if authorized)
+      let googleEventId = null;
+      if (googleAccessToken) {
+        googleEventId = await createGoogleCalendarEvent(
+          `Приём: ${name}`,
+          `Анамнез: ${anamnesis}\nЗаметка: ${noteText}`,
+          appDateTime
+        );
+      }
+
+      // 3. Add Appointment Record
+      const newAppointment = {
+        id: 'app_' + Date.now(),
+        patient_id: patient.id,
+        patient_name: name,
+        patient_phone: phone,
+        datetime: appDateTime,
+        payment: Number(payment),
+        google_event_id: googleEventId,
+        doctor_note: {
+          text: noteText,
+          remind_days_before: daysBefore,
+          remind_date: remindDate.toISOString().split('T')[0]
+        }
+      };
+
+      if (!dbData.appointments) dbData.appointments = [];
+      dbData.appointments.push(newAppointment);
+
+      // 4. Save to JSONbin & Render
+      await saveDataToJSONbin();
+      renderRecords();
+      document.getElementById('appointmentForm').reset();
+      alert('Запись успешно сохранена!');
+    }
+
+    // ===== RENDER FUNCTION =====
+    function renderRecords() {
+      const list = document.getElementById('recordsList');
+      if (!dbData.appointments || dbData.appointments.length === 0) {
+        list.innerHTML = `<p class="text-slate-400 text-sm text-center py-8">Записей пока нет.</p>`;
+        return;
+      }
+
+      list.innerHTML = dbData.appointments.map(app => {
+        const dateFormatted = new Date(app.datetime).toLocaleString('ru-RU');
+        return `
+          <div class="border rounded-lg p-4 bg-slate-50 space-y-2">
+            <div class="flex justify-between items-start">
+              <div>
+                <h3 class="font-bold text-slate-800">${app.patient_name}</h3>
+                <p class="text-xs text-slate-500">📞 ${app.patient_phone} | 🗓️ ${dateFormatted}</p>
+              </div>
+              <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-0.5 rounded">
+                ${app.payment} ₽
+              </span>
+            </div>
+
+            ${app.doctor_note.text ? `
+              <div class="bg-amber-100/70 border border-amber-200 rounded p-2 text-xs text-amber-900">
+                🛠️ <b>Заметка к приёму:</b> ${app.doctor_note.text}
+                <div class="text-[10px] text-amber-700 mt-1">
+                  ⏰ Напомнить до: <b>${app.doctor_note.remind_date}</b> (за ${app.doctor_note.remind_days_before} дн.)
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ===== MODAL CONTROLS =====
+    function openSettingsModal() {
+      const { masterKey, binId, googleClientId } = getCredentials();
+      document.getElementById('cfgMasterKey').value = masterKey;
+      document.getElementById('cfgBinId').value = binId;
+      document.getElementById('cfgGoogleClientId').value = googleClientId;
+      document.getElementById('settingsModal').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.add('hidden');
+    }
+
+    function saveSettings() {
+      localStorage.setItem('jsonbin_master_key', document.getElementById('cfgMasterKey').value.trim());
+      localStorage.setItem('jsonbin_bin_id', document.getElementById('cfgBinId').value.trim());
+      localStorage.setItem('google_client_id', document.getElementById('cfgGoogleClientId').value.trim());
+      closeSettingsModal();
+      loadDataFromJSONbin();
+    }
+
+    // Init on load
+    window.onload = loadDataFromJSONbin;
+  </script>
+</body>
+          </html>
+          
